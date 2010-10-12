@@ -41,18 +41,24 @@ class SetupWorkersShell extends Shell {
 		} else {
 
 			$console_path = cygpath(CAKE . 'console', true);
+			$app_path = cygpath(APP, true);
 			$app_name = 'carlipa';
 
 			//exec('crontab -r', $return);
 
 			# worker_media_converter
 			$shell = "media_converter_worker";
-			$job = "cd $console_path && ./cake $shell -app $app_name";
-			$this->TaskHandler->add('MediaConverterWorker', $job);
+			$job = "${app_path}cake $shell";
+			$this->TaskHandler->add(Inflector::camelize($shell), $job);
 
-			# cron check
-			$job = "pwd;id";
-			$this->TaskHandler->add('CronCheck', $job);
+			# worker_media_converter
+			$shell = "broadcast_generator_worker";
+			$job = "${app_path}cake $shell";
+			$this->TaskHandler->add(Inflector::camelize($shell), $job);
+
+			# player_check_task
+			$job = 'wget --no-check-certificate --timeout=1 -O ' . TMP . 'null' . ' http' . (Configure::read('Server.ssl') ? 's' : null) . '://' . SERVER_NAME . '/players/check';
+			$this->TaskHandler->add('PlayerCheckTask', $job);
 
 			$this->out($this->TaskHandler->index());
 

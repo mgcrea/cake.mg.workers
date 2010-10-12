@@ -31,5 +31,11 @@ class Ffmpeg2theoraTask extends Shell {
 
 		return $job;
 	}
+
+	function beforeWork($job) {
+		$job = parent::beforeWork($job);
+		return $job;
+	}
+
 }
 ?>

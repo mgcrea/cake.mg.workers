@@ -55,7 +55,7 @@ class ProcessHandlerComponent extends Object {
 
 		if(DS == '\\') {
 			$cmd = $this->settings['pstools_psexec'] . ' -d -accepteula ' . $cmd;
-		} else {
+		} else { // works with cygwin + add log
 			$cmd = $cmd . ' > /dev/null 2>&1 & echo $!';
 		}
 

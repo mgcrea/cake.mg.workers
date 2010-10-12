@@ -50,6 +50,13 @@ class MediaConverterWorkerShell extends Shell {
 		$this->TaskHandler->add($this->name, $job);
 	}
 
+	/*~~ callback ~~*/
+
+	function beforeWork($job) {
+		$this->log('beforeWork');
+		return $job;
+	}
+
 	/*~~ utility methods ~~*/
 
 	function log($info = null, $data = null, $log = null) {

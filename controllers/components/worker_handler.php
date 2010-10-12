@@ -40,7 +40,7 @@ class WorkerHandlerComponent extends Object {
 
 	}
 
-	function add($type = null, $name = 'worker') {
+	/*function add($type = null, $name = 'worker') {
 
 		if($type == 'worker') {
 
@@ -64,7 +64,7 @@ class WorkerHandlerComponent extends Object {
 
 		//$shell = CONFIGS . 'shell.php';
 		//$script = $_SERVER['PHPRC'] . DS . 'php.exe -f '.$shell.' http://'.SERVER_NAME.'/workers/work' . ($worker?'/'.$worker:null) . '/username:'. $this->username . '/password:' . $this->password;
-	}
+	}*/
 
 	function delete($worker = null) {
 		if(!$worker) return false;
@@ -73,75 +73,133 @@ class WorkerHandlerComponent extends Object {
 
 	function run($worker = null) {
 		if(!$worker) return false;
+		$this->log($worker.'::run');
 		return $this->TaskHandler->run($worker);
 	}
 
-	function job($worker = null, $job = array()) {
-		if(!$worker) return false;
-		$workerCache = Inflector::underscore('worker_' . $worker);
+	function add($job = array()) {
+		if(!$job) return false;
 
-		$jobs = Cache::read($workerCache, 'workers');
-		$jobs[] = array_merge($job, array('created' => microtime(true)));
-		$this->log($worker.'::add_job', $job);
-		Cache::write($workerCache, $jobs, 'workers');
+		$defaults = array(
+			'plugin' => null,
+			'shell' => null,
+			'task' => 'work'
+		);
+		$job = array_merge($defaults, $job);
 
-		return $this->run($worker);
+		$job['worker'] = $worker = Inflector::camelize($job['shell'] . 'Worker');
+		$job['cache'] = $cache = Inflector::underscore($job['worker']);
+
+		//App::import('Core', 'Shell'); doesn't work - why ?
+		include_once(ROOT . DS . 'cake' . DS . 'console' . DS . 'libs' . DS . 'shell.php');
+		App::import('Shell', ($job['plugin'] ? Inflector::camelize($job['plugin']) . '.' : null) . Inflector::camelize($job['worker']));
+
+		$className = Inflector::camelize($job['worker'] . 'Shell');
+		if(class_exists($className)) {
+
+			# beforeWork callback
+			$Shell = new $className($this);
+			$Shell->initialize();
+			$ShellTask =& $Shell->{Inflector::camelize($job['task'])};
+			if(!empty($ShellTask) && method_exists($ShellTask, 'beforeWork')) {
+				$job = $ShellTask->beforeWork($Shell, $job);
+			} elseif(method_exists($Shell, 'beforeWork')) {
+				$job = $Shell->beforeWork($job);
+			}
+
+			# add job to cache
+			if(!empty($job)) {
+				$jobs = Cache::read($job['cache'], 'workers');
+				$jobs[] = array_merge($job, array('created' => microtime(true)));
+				$this->log($worker . '::add_job', $job);
+				Cache::write($job['cache'], $jobs, 'workers');
+				return $this->run($job['worker']);
+			} else {
+				$this->log($worker . '::empty_after_beforeWork');
+			}
+		} else {
+			$this->log($worker . '::!class_exists($className)');
+		}
+
+		return false;
 	}
 
-	function work($worker = null) {
-		if(!$worker) return false;
-		$workerCache = Inflector::underscore('worker_' . $worker);
+	function work($shell = null) {
+		if(!$shell) return false;
 
-		$jobs = Cache::read($workerCache, 'workers');
+		$worker = Inflector::camelize($shell . 'Worker');
+		$cache = Inflector::underscore($worker);
+
+		$jobs = Cache::read($cache, 'workers');
 		if(is_array($jobs)&&isset($jobs[0])) $job =& $jobs[0];
 		else $job = null;
 
-		if (!$job) {
-			$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'sleep');
+		if (!$job && !count($jobs)) {
+			$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $shell . '::' . 'sleep');
 		} elseif(!is_array($job)) {
-			array_shift($jobs);
-			Cache::write($workerCache, $jobs, 'workers');
-			$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'invalid_job', compact('job'));
-			$this->work($worker);
-		} elseif(!empty($job['task']) && method_exists($this->Controller->{Inflector::camelize($job['task'])}, 'execute')) {
+			if(is_array($jobs)) array_shift($jobs);
+			else $jobs = array();
+			Cache::write($cache, $jobs, 'workers');
+			$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $shell . '::' . 'invalid_job', compact('job'));
+			$this->log($jobs); exit;
+			$this->work($shell);
+
+		} else {
+
+			$className = Inflector::camelize($job['worker'] . 'Shell');
+			//App::import('Core', 'Shell'); doesn't work - why ?
+			include_once(ROOT . DS . 'cake' . DS . 'console' . DS . 'libs' . DS . 'shell.php');
+			$Shell = new $className($this);
+			$Shell->initialize();
+
+			$ShellTask =& $this->Controller->{Inflector::camelize($job['task'])};
 
 			if(!empty($job['pid'])) {
 				if($this->ProcessHandler->isAlive($job['pid'])) {
-					$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'isAlive', compact('job'));
+					$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $shell . '::' . 'isAlive', compact('job'));
 					exit();
 				} else {
 					array_shift($jobs);
-					Cache::write($workerCache, $jobs, 'workers');
-					if(!empty($job['after'])) $this->_afterWork($job);
-					$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'isDead', compact('job'));
-					$this->work($worker);
+					Cache::write($cache, $jobs, 'workers');
+					$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $shell . '::' . 'isDead', compact('job'));
+
+					if(!empty($ShellTask) && method_exists($ShellTask, 'afterWork')) {
+						$ShellTask->afterWork($this->Controller, $job);
+					} elseif(method_exists($Shell, 'afterWork')) {
+						$Shell->afterWork($job);
+					}
+
+					$this->work($shell);
 				}
 			} elseif(isset($job['pid'])&&!$job['pid']) {
 				array_shift($jobs);
-				Cache::write($workerCache, $jobs, 'workers');
-				$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'invalid_pid', compact('job'));
-				$this->work($worker);
+				Cache::write($cache, $jobs, 'workers');
+				$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $shell . '::' . 'invalid_pid', compact('job'));
+				$this->work($shell);
 			}
 
-			$jobs[0] = $this->Controller->{Inflector::camelize($job['task'])}->execute($this->Controller, $job);
-			Cache::write($workerCache, $jobs, 'workers');
-			$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'started', compact('job'));
-		} else {
-			array_shift($jobs);
-			Cache::write($workerCache, $jobs, 'workers');
-			$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'invalid_task', compact('job'));
-			$this->work($worker);
+			# update pid with current process
+			$job['pid'] = getmypid();
+			Cache::write($cache, $jobs, 'workers');
+
+			$Shell->initialize();
+
+			if(!empty($ShellTask) && method_exists($ShellTask, 'execute')) {
+				$jobs[0] = $ShellTask->execute($this->Controller, $job);
+			} elseif(method_exists($Shell, $job['task'])) {
+				$jobs[0] = $Shell->{$job['task']}($job);
+			} else {
+				array_shift($jobs);
+				Cache::write($cache, $jobs, 'workers');
+				$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $shell . '::' . 'unknown_task', compact('job'));
+				$this->work($shell);
+			}
+
+			Cache::write($cache, $jobs, 'workers');
+			$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $shell . '::' . 'started', compact('job'));
 		}
 
 		exit;
-	}
-
-	function _afterWork($job) {
-		$afterWork = $job['after'];
-
-		if(!is_array($afterWork)) $afterWork = array($afterWork);
-
-		if(in_array('unlink', $afterWork)) @unlink($job['input']);
 	}
 
 	/*~~ utility methods ~~*/

@@ -13,6 +13,8 @@ class TaskHandlerComponent extends Object {
 
 	var $name = 'TaskHandler';
 
+	//var $components = array('MgWorkers.ProcessHandler');
+
 /**
 * Settings
 *
@@ -105,7 +107,7 @@ class TaskHandlerComponent extends Object {
 			$log = cygpath(TMP . 'logs' . DS . 'workers' . DS . '`date +\%Y\%m\%d`' . '-' . Inflector::underscore($name) . '-raw.log', true);
 			$log_errors = cygpath(TMP . 'logs' . DS . 'workers' . DS . '`date +\%Y\%m\%d`' . '-' . Inflector::underscore($name) . '-errors.log', true);
 			if(!strpos($job, '>')) $job .= " >> $log";
-			if(!strpos($job, '2>')) $job .= " 2> $log_errors";
+			if(!strpos($job, '2>')) $job .= " 2>> $log_errors";
 
 			$content = "#\n";
 			$content .= '# CakeTask : '  . $name . "\n";
@@ -156,9 +158,10 @@ class TaskHandlerComponent extends Object {
 				if(!empty($matches[6])) {
 					$cmd = $matches[6];
 					if(DS == '\\') $cmd = 'bash -c "' . $cmd . '"';
-					xdebug_start_trace(TMP . 'logs' . DS . 'xdebug.log');
+
 					$pipes = proc_exec($cmd);
-					xdebug_stop_trace();
+					//$pipes = $this->ProcessHandler->start($cmd);
+
 					return $pipes;
 				}
 			}
