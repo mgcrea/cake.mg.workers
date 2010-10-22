@@ -13,7 +13,7 @@ class SetupWorkersShell extends Shell {
 	var $name = 'SetupWorkers';
 	var $uses = array();
 	var $tasks = array();
-	var $components = array('MgWorkers.TaskHandler');
+	var $components = array('MgWorkers.TaskHandler', 'MgWorkers.ProcessHandler');
 
 	function construct() {
 		if(!empty($this->components)) {
