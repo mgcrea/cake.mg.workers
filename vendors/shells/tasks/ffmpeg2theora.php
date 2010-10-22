@@ -25,9 +25,9 @@ class Ffmpeg2theoraTask extends Shell {
 		if(!isset($job['options'])) $job['options'] = null;
 		$job['cmd'] = $exe . ' ' . $job['options'] . ' "' . $job['input'] . '"';
 		$job['started'] = microtime(true);
-		$this->Shell->log(__FUNCTION__ . ' (' . __LINE__ . ') : starting', compact('job'));
+		//$this->Shell->log(__FUNCTION__ . ' (' . __LINE__ . ') : starting', compact('job'));
 		$job['pid'] = $this->Shell->ProcessHandler->start($job['cmd']);
-		$this->Shell->log(__FUNCTION__ . ' (' . __LINE__ . ') : started', compact('job'));
+		//$this->Shell->log(__FUNCTION__ . ' (' . __LINE__ . ') : started', compact('job'));
 
 		return $job;
 	}

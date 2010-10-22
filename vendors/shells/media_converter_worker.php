@@ -57,6 +57,11 @@ class MediaConverterWorkerShell extends Shell {
 		return $job;
 	}
 
+	function afterWork($job) {
+		$this->log('afterWork');
+		if(!empty($job['after']['unlink'])) @unlink($job['input']);
+	}
+
 	/*~~ utility methods ~~*/
 
 	function log($info = null, $data = null, $log = null) {

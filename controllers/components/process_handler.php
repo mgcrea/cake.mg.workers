@@ -32,11 +32,16 @@ class ProcessHandlerComponent extends Object {
 	function initialize(&$controller, $settings = array()) {
 		$this->controller =& $controller;
 		$this->settings = array_merge($this->_defaults, $settings);
-		if(DS == '\\' && !$this->settings['pstools_path']) $this->settings['pstools_path'] = VENDORS . 'pstools';
 
-		if(DS == '\\' && file_exists(rtrim($this->settings['pstools_path'], DS) . DS . 'psexec.exe')) {
+		if(DS == '\\') {
+			if(!$this->settings['pstools_path']) $this->settings['pstools_path'] = VENDORS . 'pstools';
+			if(file_exists(rtrim($this->settings['pstools_path'], DS) . DS . 'psexec.exe')) {
 			$this->settings['pstools_psexec'] = rtrim($this->settings['pstools_path'], DS) . DS . 'psexec.exe';
 			$this->settings['pstools_pslist'] = rtrim($this->settings['pstools_path'], DS) . DS . 'pslist.exe';
+			} else {
+				trigger_error('unable to find pstools');
+				exit;
+			}
 		}
 
 		Configure::write('debug', 2);
@@ -54,7 +59,8 @@ class ProcessHandlerComponent extends Object {
 		if(!$cmd) return false;
 
 		if(DS == '\\') {
-			$cmd = $this->settings['pstools_psexec'] . ' -d -accepteula ' . $cmd;
+			$bat = write_tmp(str_replace('%', '%%', $cmd), '.bat');
+			$cmd = $this->settings['pstools_psexec'] . ' -d -accepteula ' . $bat;
 		} else { // works with cygwin + add log
 			$cmd = $cmd . ' > /dev/null 2>&1 & echo $!';
 		}

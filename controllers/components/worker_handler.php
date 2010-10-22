@@ -40,32 +40,6 @@ class WorkerHandlerComponent extends Object {
 
 	}
 
-	/*function add($type = null, $name = 'worker') {
-
-		if($type == 'worker') {
-
-			$taskName = $this->prefix . ucfirst($name);
-			return $this->__task_add($taskName, 'wget --no-check-certificate --timeout=1 -O ' . TMP . 'null' . ' http' . (Configure::read('Server.ssl') ? 's' : null) . '://' . SERVER_NAME . '/workers/work/' . $name . '/username:'. $this->username . '/password:' . $this->password);
-
-		} elseif($type == 'task') {
-			$name = !empty($this->passedArgs['name']) ? $this->passedArgs['name'] : 'default';
-
-			$tasks = array(
-				'ColPlayerCheck' => 'wget --no-check-certificate --timeout=1 -O ' . TMP . 'null' . ' http' . (Configure::read('Server.ssl') ? 's' : null) . '://' . SERVER_NAME . '/players/check' . '/username:'. $this->username . '/password:' . $this->password
-			);
-
-			if(!empty($tasks[$name])) {
-				debug($this->__task_add($name, $tasks[$name]));
-			}
-
-			exit;
-
-		}
-
-		//$shell = CONFIGS . 'shell.php';
-		//$script = $_SERVER['PHPRC'] . DS . 'php.exe -f '.$shell.' http://'.SERVER_NAME.'/workers/work' . ($worker?'/'.$worker:null) . '/username:'. $this->username . '/password:' . $this->password;
-	}*/
-
 	function delete($worker = null) {
 		if(!$worker) return false;
 		return $this->TaskHandler->delete($worker);
@@ -81,9 +55,11 @@ class WorkerHandlerComponent extends Object {
 		if(!$job) return false;
 
 		$defaults = array(
+			'id' => create_guid(),
 			'plugin' => null,
 			'shell' => null,
-			'task' => 'work'
+			'task' => 'work',
+			'created' => date('Y-m-d H:i:s')
 		);
 		$job = array_merge($defaults, $job);
 
@@ -110,9 +86,10 @@ class WorkerHandlerComponent extends Object {
 			# add job to cache
 			if(!empty($job)) {
 				$jobs = Cache::read($job['cache'], 'workers');
-				$jobs[] = array_merge($job, array('created' => microtime(true)));
+				$jobs[] = $job;
 				$this->log($worker . '::add_job', $job);
 				Cache::write($job['cache'], $jobs, 'workers');
+				$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'add', compact('job'));
 				return $this->run($job['worker']);
 			} else {
 				$this->log($worker . '::empty_after_beforeWork');

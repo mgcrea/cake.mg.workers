@@ -13,7 +13,7 @@ class TaskHandlerComponent extends Object {
 
 	var $name = 'TaskHandler';
 
-	//var $components = array('MgWorkers.ProcessHandler');
+	var $components = array('MgWorkers.ProcessHandler');
 
 /**
 * Settings
@@ -159,8 +159,7 @@ class TaskHandlerComponent extends Object {
 					$cmd = $matches[6];
 					if(DS == '\\') $cmd = 'bash -c "' . $cmd . '"';
 
-					$pipes = proc_exec($cmd);
-					//$pipes = $this->ProcessHandler->start($cmd);
+					$pipes = $this->ProcessHandler->start($cmd);
 
 					return $pipes;
 				}
