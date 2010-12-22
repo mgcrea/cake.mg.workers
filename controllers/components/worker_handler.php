@@ -59,6 +59,7 @@ class WorkerHandlerComponent extends Object {
 			'plugin' => null,
 			'shell' => null,
 			'task' => 'work',
+			'server' => SERVER_NAME,
 			'created' => date('Y-m-d H:i:s')
 		);
 		$job = array_merge($defaults, $job);
@@ -89,7 +90,6 @@ class WorkerHandlerComponent extends Object {
 				$jobs[] = $job;
 				$this->log($worker . '::add_job', $job);
 				Cache::write($job['cache'], $jobs, 'workers');
-				$this->log(__FUNCTION__ . ' (' . __LINE__ . ') ' . $worker . '::' . 'add', compact('job'));
 				return $this->run($job['worker']);
 			} else {
 				$this->log($worker . '::empty_after_beforeWork');

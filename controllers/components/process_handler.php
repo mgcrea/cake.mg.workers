@@ -71,6 +71,7 @@ class ProcessHandlerComponent extends Object {
 			$return = !empty($pipes[2][5]) ? $pipes[2][5] : null;
 			$pid = (preg_match("/process ID ([\d]{1,10})\./im", $return, $matches) && !empty($matches[1]) && intval($matches[1])) ? intval($matches[1]) : false;
 		} else {
+			$return = !empty($pipes[1][0]) ? $pipes[1][0] : null;
 			$pid = intval($return) ? intval($return) : false;
 		}
 
@@ -93,7 +94,7 @@ class ProcessHandlerComponent extends Object {
 		if(DS == '\\') {
 			return !strpos($pipes[1], 'not found');
 		} else {
-			return (count(preg_split("/\n/", $return)) > 2);
+			return (count(preg_split("/\n/", $pipes[1])) > 2);
 		}
 
 	}

@@ -48,17 +48,17 @@ class SetupWorkersShell extends Shell {
 
 			# player_check_task
 			$shell = "player_check_task";
-			$job = "${app_path}cake $shell";
+			$job = "${console_path}cake $shell";
 			$this->TaskHandler->add(Inflector::camelize($shell), $job);
 
 			# worker_media_converter
 			$shell = "media_converter_worker";
-			$job = "${app_path}cake $shell";
+			$job = "${console_path}cake $shell";
 			$this->TaskHandler->add(Inflector::camelize($shell), $job);
 
 			# worker_media_converter
 			$shell = "broadcast_generator_worker";
-			$job = "${app_path}cake $shell";
+			$job = "${console_path}cake $shell";
 			$this->TaskHandler->add(Inflector::camelize($shell), $job);
 
 			$this->out($this->TaskHandler->index());

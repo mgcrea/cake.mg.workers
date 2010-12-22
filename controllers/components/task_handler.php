@@ -41,6 +41,9 @@ class TaskHandlerComponent extends Object {
 		if(DS == '\\' && file_exists(rtrim($this->settings['cygwin_path'], DS)  . DS . 'bin' . DS . 'crontab.exe')) {
 			$this->settings['cygwin_crontab'] = rtrim($this->settings['cygwin_path'], DS) . DS . 'bin' . DS . 'crontab.exe';
 			$this->settings['cygwin_bash'] = rtrim($this->settings['cygwin_path'], DS) . DS . 'bin' . DS . 'bash.exe';
+		} elseif(DS == '\\') {
+			trigger_error('cygwin bad setup');
+			exit;
 		}
 
 		Configure::write('debug', 2);
@@ -173,22 +176,33 @@ class TaskHandlerComponent extends Object {
 
 	function __crontab_list($user = null) {
 
-		$pipes = proc_exec('crontab -l');
-		$return = explode("\n", $pipes[1]);
-
-		if(DS == '\\') unset($return[0], $return[1], $return[2]);
+		if(DS == '\\') {
+			$pipes = proc_exec('crontab -l');
+			$return = explode("\n", $pipes[1]);
+			unset($return[0], $return[1], $return[2]);
+			$return = array_values($return);
+		} else {
+			if(!empty($_SERVER['USER']) && $_SERVER['USER'] != 'www-data') {
+				# calling from shell
+				$pipes = proc_exec('sudo crontab -u www-data -l');
+			} else {
+				$pipes = proc_exec('crontab -l');
+			}
+			$return = explode("\n", $pipes[1]);
+		}
 
 		return $return;
 	}
 
 	function __crontab_reset($user = null) {
-		//exec('crontab -r', $return);
 
-		$process = proc_open('crontab -r', array(array("pipe", "r"), array("pipe", "w"), array("pipe", "w")), $pipes, TMP);
-		$pipes = array_map("stream_get_contents", $pipes);
-		proc_close($process);
-		$return = explode("\n", $pipes[1]);
-		//array_pop($return);
+		if(DS == '\\') {
+			$pipes = proc_exec('crontab -r');
+			$return = explode("\n", $pipes[1]);
+		} else {
+			$pipes = proc_exec('sudo crontab -u www-data -r');
+			$return = explode("\n", $pipes[1]);
+		}
 
 		return $return;
 	}
@@ -200,8 +214,13 @@ class TaskHandlerComponent extends Object {
 
 		$destination = CACHE . 'master.cron';
 		file_put_contents($destination, $content, LOCK_EX);
-		exec('crontab ' . cygpath($destination), $result);
+		if(DS == "\\") {
+			exec('crontab ' . cygpath($destination), $result);
+		} else {
+			exec('crontab ' . $destination, $result);
+		}
 		//@unlink($destination);
+		debug($result);
 
 		return $result;
 	}
